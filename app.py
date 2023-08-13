@@ -24,7 +24,7 @@ def get_stores():
 @app.get("/store/<string:name>")
 def get_store(name):
     store = list(filter(lambda s: s["name"] == name, stores))
-    return (store, 201) if store else ({"message": "Store not found!"}, 404)
+    return (store[0], 201) if store else ({"message": "Store not found!"}, 404)
 
 
 # Get items from a specific store
