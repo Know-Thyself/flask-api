@@ -20,6 +20,24 @@ def get_stores():
     return {"stores": stores}
 
 
+# Get a specific store
+@app.get("/store/<string:name>")
+def get_store(name):
+    store = list(filter(lambda s: s["name"] == name, stores))
+    return (store, 201) if store else ({"message": "Store not found!"}, 404)
+
+
+# Get items from a specific store
+@app.get("/store/<string:name>/items")
+def get_store_items(name):
+    store = list(filter(lambda s: s["name"] == name, stores))
+    return (
+        ({"store_items": store[0]["items"]}, 201)
+        if store[0]["items"]
+        else ({"message": "No items found in the store!"}, 404)
+    )
+
+
 # Create a store
 @app.post("/store")
 def create_store():
@@ -39,3 +57,7 @@ def add_item(name):
             store["items"].append(new_item)
             return new_item, 201
     return {"message": "Store not found!"}, 404
+
+
+# if __name__ == "__main__":
+#     app.run(debug=True)
