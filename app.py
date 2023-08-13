@@ -1,30 +1,24 @@
 from flask import Flask, request
+from flask_smorest import abort
+from db import stores, items
+import uuid
 
 app = Flask(__name__)
-
-# Temp data
-stores = [
-    {
-        "name": "My Store",
-        "items": [
-            {"name": "chair", "price": "£29.99"},
-            {"name": "table", "price": "£49.99"},
-        ],
-    }
-]
 
 
 # Get stores route/endpoint
 @app.get("/stores")
 def get_stores():
-    return {"stores": stores}
+    return {"stores": list(stores.values())}
 
 
 # Get a specific store
-@app.get("/store/<string:name>")
-def get_store(name):
-    store = list(filter(lambda s: s["name"] == name, stores))
-    return (store[0], 201) if store else ({"message": "Store not found!"}, 404)
+@app.get("/store/<string:store_id>")
+def get_store(store_id):
+    try:
+        return stores[store_id], 201
+    except KeyError:
+        abort(404, message="Store not found!")
 
 
 # Get items from a specific store
@@ -42,21 +36,28 @@ def get_store_items(name):
 @app.post("/store")
 def create_store():
     store = request.get_json()
-    new_store = {"name": store["name"], "items": []}
-    stores.append(new_store)
+    store_id = uuid.uuid4().hex
+    new_store = {**store, "store_id": store_id}
+    stores[store_id] = new_store
     return new_store, 201
 
 
 # Adding item
-@app.post("/store/<string:name>/item")
-def add_item(name):
+@app.post("/item")
+def add_item():
     item = request.get_json()
-    new_item = {"name": item["name"], "price": item["price"]}
-    for store in stores:
-        if store["name"] == name:
-            store["items"].append(new_item)
-            return new_item, 201
-    return {"message": "Store not found!"}, 404
+    if not "store_id" in item or not "name" in item or not "price" in item:
+        abort(
+            400,
+            message="Bad request! Please ensure store_id, name and price are included in the JSON payload",
+        )
+    if item["name"] in items.values() or item["store_id"] in items.values():
+        abort(400, message="Bad request! Item already exists.")
+    item_id = uuid.uuid4().hex
+    new_item = {**item, "item_id": item_id}
+    items[item_id] = new_item
+
+    return new_item
 
 
 # if __name__ == "__main__":
