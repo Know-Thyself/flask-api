@@ -3,6 +3,7 @@ from flask import request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from db import items
+from schema import ItemSchema, ItemUpdate
 
 blp = Blueprint("items", __name__, description="Operations on items")
 
@@ -22,15 +23,8 @@ class Items(MethodView):
         except KeyError:
             abort(404, message="Item not found.")
 
-    def put(self, item_id):
-        item_data = request.get_json()
-        # There's  more validation to do here!
-        # Like making sure price is a number, and also both items are optional
-        if not "price" in item_data or not "name" in item_data:
-            abort(
-                400,
-                message="Bad request. Please ensure 'price', and 'name' are included in the JSON payload.",
-            )
+    @blp.arguments(ItemUpdate)
+    def put(self, item_data, item_id):
         try:
             item = items[item_id]
             # https://blog.teclado.com/python-dictionary-merge-update-operators/
@@ -45,17 +39,15 @@ class ItemsList(MethodView):
     def get(self):
         return {"items": list(items.values())}
 
-    def post(self):
-        item = request.get_json()
-        print(item)
-        if not "item_name" in item:
-            abort(
-                400,
-                message="Bad request! Please make sure to include item_name in JSON payload.",
-            )
-        if "item_name" in items:
-            abort(400, message="Item already exists.")
+    @blp.arguments(ItemSchema)
+    def post(self, new_item):
+        for item in items.values():
+            if (
+                new_item["item_name"] == item["item_name"]
+                and new_item["store_id"] == item["store_id"]
+            ):
+                abort(400, message="Item already exists.")
         item_id = uuid.uuid4().hex
-        new_store = {**item, "item_id": item_id}
-        items[item_id] = new_store
-        return new_store, 201
+        item = {**new_item, "item_id": item_id}
+        items[item_id] = item
+        return item, 201
