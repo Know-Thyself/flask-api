@@ -6,30 +6,34 @@ import uuid
 app = Flask(__name__)
 
 
-# Get stores route/endpoint
+# Get all stores route/endpoint
 @app.get("/stores")
 def get_stores():
     return {"stores": list(stores.values())}
+
+
+# Get all items
+@app.get("/items")
+def get_items():
+    return {"items": list(items.values())}
 
 
 # Get a specific store
 @app.get("/store/<string:store_id>")
 def get_store(store_id):
     try:
-        return stores[store_id], 201
+        return stores[store_id], 200
     except KeyError:
         abort(404, message="Store not found!")
 
 
-# Get items from a specific store
-@app.get("/store/<string:name>/items")
-def get_store_items(name):
-    store = list(filter(lambda s: s["name"] == name, stores))
-    return (
-        ({"store_items": store[0]["items"]}, 201)
-        if store[0]["items"]
-        else ({"message": "No items found in the store!"}, 404)
-    )
+# Get a specific item
+@app.get("/item/<string:item_id>")
+def get_item(item_id):
+    try:
+        return items[item_id], 200
+    except KeyError:
+        abort(404, message="Item not found!")
 
 
 # Create a store
@@ -60,5 +64,39 @@ def add_item():
     return new_item
 
 
-# if __name__ == "__main__":
-#     app.run(debug=True)
+# Updating item
+@app.put("/item/<string:item_id>")
+def update_item(item_id):
+    item_data = request.get_json()
+    # There's  more validation to do here!
+    # Like making sure price is a number, and also both items are optional
+    if not "price" in item_data or not "name" in item_data:
+        abort(
+            400,
+            message="Bad request. Please ensure 'price', and 'name' are included in the JSON payload.",
+        )
+    try:
+        item = items[item_id]
+        # https://blog.teclado.com/python-dictionary-merge-update-operators/
+        item |= item_data
+        return item
+    except KeyError:
+        abort(404, message="Item not found.")
+
+
+@app.delete("/store/<string:store_id>")
+def delete_store(store_id):
+    try:
+        del stores[store_id]
+        return {"message": "Store deleted."}
+    except KeyError:
+        abort(404, message="Store not found.")
+
+
+@app.delete("/item/<string:item_id>")
+def delete_item(item_id):
+    try:
+        del items[item_id]
+        return {"message": "Item deleted."}
+    except KeyError:
+        abort(404, message="Item not found.")
