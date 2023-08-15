@@ -1,9 +1,9 @@
-import uuid
-from flask import request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from db import items
 from schema import ItemSchema, ItemUpdate
+from models import ItemModel
+from db import db
+from sqlalchemy.exc import SQLAlchemyError
 
 blp = Blueprint("items", __name__, description="Operations on items")
 
@@ -12,46 +12,43 @@ blp = Blueprint("items", __name__, description="Operations on items")
 class Items(MethodView):
     @blp.response(200, ItemSchema)
     def get(self, item_id):
-        try:
-            return items[item_id], 200
-        except KeyError:
-            abort(404, message="Item not found!")
+        item = ItemModel.query.get_or_404(item_id)
+        return item
 
     def delete(self, item_id):
-        try:
-            del items[item_id]
-            return {"message": "Item deleted."}
-        except KeyError:
-            abort(404, message="Item not found.")
+        item = ItemModel.query.get_or_404(item_id)
+        db.session.delete(item)
+        db.session.commit()
+        return {"message": "Item deleted."}
 
     @blp.arguments(ItemUpdate)
     @blp.response(200, ItemSchema)
     def put(self, item_data, item_id):
-        try:
-            item = items[item_id]
-            # https://blog.teclado.com/python-dictionary-merge-update-operators/
-            item |= item_data
-            return item
-        except KeyError:
-            abort(404, message="Item not found.")
+        item = ItemModel.query.get(item_id)
+        if item:
+            item.price = item_data["price"]
+            item.name = item_data["name"]
+        else:
+            item = ItemModel(id=item_id, **item_data)
+        db.session.add(item)
+        db.session.commit()
+
+        return item
 
 
 @blp.route("/items")
 class ItemsList(MethodView):
     @blp.response(200, ItemSchema(many=True))
     def get(self):
-        return items.values()
+        return ItemModel.query.all()
 
     @blp.arguments(ItemSchema)
     @blp.response(201, ItemSchema)
     def post(self, new_item):
-        for item in items.values():
-            if (
-                new_item["item_name"] == item["item_name"]
-                and new_item["store_id"] == item["store_id"]
-            ):
-                abort(400, message="Item already exists.")
-        item_id = uuid.uuid4().hex
-        item = {**new_item, "item_id": item_id}
-        items[item_id] = item
+        item = ItemModel(**new_item)
+        try:
+            db.session.add(item)
+            db.session.commit()
+        except SQLAlchemyError:
+            abort(500, message="Error occured while trying to insert the item.")
         return item, 201
