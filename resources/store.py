@@ -3,6 +3,7 @@ from flask_smorest import Blueprint, abort
 from schema import StoreSchema
 from models import StoreModel
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from flask_jwt_extended import jwt_required
 from db import db
 
 blp = Blueprint("stores", __name__, description="Operations on stores")
@@ -15,6 +16,7 @@ class Store(MethodView):
         store = StoreModel.query.get_or_404(store_id)
         return store
 
+    @jwt_required()
     def delete(self, store_id):
         store = StoreModel.query.get_or_404(store_id)
         db.session.delete(store)
@@ -28,6 +30,7 @@ class StoresList(MethodView):
     def get(self):
         return StoreModel.query.all()
 
+    @jwt_required()
     @blp.arguments(StoreSchema)
     @blp.response(201, StoreSchema)
     def post(self, new_store):
