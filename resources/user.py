@@ -4,9 +4,11 @@ from schema import UserSchema
 from models import UserModel
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from passlib.hash import pbkdf2_sha256
+from flask_jwt_extended import create_access_token
 from db import db
 
-blp = Blueprint("users", __name__, description="Operations on users")
+# blp = Blueprint("users", __name__, description="Operations on users")
+blp = Blueprint("Users", "users", description="Operations on users")
 
 
 @blp.route("/register")
@@ -19,6 +21,7 @@ class RegisterUser(MethodView):
             username=user_data["username"],
             password=pbkdf2_sha256.hash(user_data["password"]),
         )
+        print(user)
         db.session.add(user)
         db.session.commit()
         return {"message": "User created successfully!"}, 201
@@ -31,8 +34,21 @@ class User(MethodView):
         user = UserModel.query.get_or_404(user_id)
         return user
 
-    def delet(self, user_id):
+    def delete(self, user_id):
         user = UserModel.query.get_or_404(user_id)
         db.session.delete(user)
         db.session.commit()
         return {"message": "User account deleted."}
+
+
+@blp.route("/login")
+class UserLogin(MethodView):
+    @blp.arguments(UserSchema)
+    def post(self, user_data):
+        user = UserModel.query.filter(
+            UserModel.username == user_data["username"]
+        ).first()
+        if user and pbkdf2_sha256.verify(user_data["password"], user.password):
+            access_token = create_access_token(identity=user.id)
+            return {"Access Token": access_token}
+        abort(401, message="Invalid credentials")

@@ -29,11 +29,14 @@ def create_app(db_url=None):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
     api = Api(app)
-    app.config["JWT_SECRET_KEY"] = environ.get("JWT_SECRET_KEY")
+    # app.config["JWT_SECRET_KEY"] = environ.get("JWT_SECRET_KEY")
+    app.config["JWT_SECRET_KEY"] = "NO_SECRET"
+    print(environ.get("JWT_SECRET_KEY"))
     jwt = JWTManager(app)
 
     with app.app_context():
         import models
+
         db.create_all()
 
     api.register_blueprint(ItemBlueprint)
