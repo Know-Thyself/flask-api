@@ -5,7 +5,10 @@ WORKDIR /app
 COPY ./requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-CMD ["flask", "run", "--debug", "--host", "0.0.0.0"]
+# CMD ["flask", "run", "--debug", "--host", "0.0.0.0"] development
+# Deployment command
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "app:create_app()"]
+
 
 # # Comments are provided throughout this file to help you get started.
 # # If you need more help, visit the Dockerfile reference guide at
@@ -50,10 +53,10 @@ CMD ["flask", "run", "--debug", "--host", "0.0.0.0"]
 # COPY . .
 
 # # Expose the port that the application listens on.
-# EXPOSE 8000
+# EXPOSE 80
 
-# # Run the application.
-# # CMD gunicorn '.venv.Lib.site-packages.werkzeug.wsgi' --bind=0.0.0.0:8000
+# # Run the application. 
+# CMD gunicorn '.venv.Lib.site-packages.werkzeug.wsgi' --bind=0.0.0.0:80
 # CMD [ "flask", "run", "--debug", "--host", "0.0.0.0"]
 
 # # docker compose up --build 
