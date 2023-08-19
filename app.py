@@ -6,10 +6,11 @@ from resources.tag import blp as TagBlueprint
 from resources.user import blp as UserBlueprint
 from flask_jwt_extended import JWTManager
 from blocklist import BLOCKLIST
-from os import environ
-from db import db
-import models
 import os
+
+# from os import environ
+from db import db
+from flask_migrate import Migrate
 
 
 def create_app(db_url=None):
@@ -24,15 +25,16 @@ def create_app(db_url=None):
     app.config[
         "OPENAPI_SWAGGER_UI_URL"
     ] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_url or os.getenv(
-        "DATABASE_URL", "sqlite:///data.db"
-    )
+    # app.config["SQLALCHEMY_DATABASE_URI"] = db_url or os.getenv(
+    #     "DATABASE_URL", "sqlite:///data.db"
+    # )
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///data.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
+    migrate = Migrate(app, db)
     api = Api(app)
     # app.config["JWT_SECRET_KEY"] = environ.get("JWT_SECRET_KEY")
     app.config["JWT_SECRET_KEY"] = "no_secret"
-    print(environ.get("JWT_SECRET_KEY"))
     jwt = JWTManager(app)
 
     # claims may have their use cases but not necessary for this app
@@ -104,10 +106,16 @@ def create_app(db_url=None):
             401,
         )
 
-    with app.app_context():
-        import models
+    # with app.app_context():
+    #     from models import (
+    #         ItemModel,
+    #         ItemsTagsModel,
+    #         StoreModel,
+    #         TagModel,
+    #         UserModel,
+    #     )  # noqa: F401
 
-        db.create_all()
+    #     db.create_all()
 
     api.register_blueprint(ItemBlueprint)
     api.register_blueprint(StoreBlueprint)
